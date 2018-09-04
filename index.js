@@ -1,6 +1,14 @@
+
 var express = require('express');
 var pg = require("pg");
 var app = express();
+
+app.use(function(req, res, next) {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    next();
+   });
+
 
 /* In app.js we are using body-parser and we are telling our 
    Express application to use that plugin as well. */   
@@ -35,58 +43,20 @@ app.post('/test/submit', function(req, res, next) {
     console.log(id);
 });
 
-app.post('/user/create', (request, response, next) => {
-    pg.connect(connectionString,function(err,client,done) {
-        if(err){
-            console.log("not able to get connection "+ err);
-            response.status(400).send(err);
-        } 
-        console.log("connected to database");
-        client.query("INSERT INTO users(name, email, google_uid) values($1, $2, $3) returning id",
-        [request.body.name, request.body.email, request.body.google_uid]), 
-        // request.body),
-        function(err,result) {
-            done(); // closing the connection;
-            if(err){
-                console.log(err);
-                response.status(400).send(err);
-            }
-            response.status(200).send(result.rows);
-        }
-     });
- 
-    // none('insert into user(name, email, google_uid)' +
-    //   'values(${name}, ${email}, ${google_uid})',
-    // req.body)
-    // .then(function (){
-    //     res.status(200)
-    //     .json({
-    //       status: 'success',
-    //       message: 'Inserted one puppy'
-    //     });
-    // })
-    // .catch(function (err) {
-    //     return next(err);
-    //   });
-
-
-    // const postBody = request.body;
-    // console.log(postBody);
-
-
+app.post('/auth/user/login', (request, response, next) => {
+    console.log("REQUEST BODY");
     console.log(request.body);
-    response.send(request.body);
-});
-
-app.post('/post/create', (request, response, next) => {
+    console.log(request.body.name);
+    console.log(request.body.email);
+    console.log(request.body.google_uid);
     pg.connect(connectionString,function(err,client,done) {
         if(err){
             console.log("not able to get connection "+ err);
             response.status(400).send(err);
         } 
         console.log("connected to database");
-        client.query("INSERT INTO posts(name, title, description, url, url_to_image, published_at, user_id) values($1, $2, $3, $4, $5, $6, $7) returning id",
-        [request.body.name, request.body.title, request.body.description, request.body.url, request.body.url_to_image, request.body.published_at, request.body.user_id]), 
+        client.query("INSERT INTO users(name, email, google_uid) values($1, $2, $3)",
+        [request.body.name, request.body.email, request.body.google_uid], 
         // request.body),
         function(err,result) {
             done(); // closing the connection;
@@ -94,12 +64,33 @@ app.post('/post/create', (request, response, next) => {
                 console.log(err);
                 response.status(400).send(err);
             }
-            response.status(200)
-            .json({
-                name: request.body.name
-            })
-        }
-     });
+            response.status(200).send(result);
+        })
+     })
+ })
+
+// app.post('/post/create', (request, response, next) => {
+//     pg.connect(connectionString,function(err,client,done) {
+//         if(err){
+//             console.log("not able to get connection "+ err);
+//             response.status(400).send(err);
+//         } 
+//         console.log("connected to database");
+//         client.query("INSERT INTO posts(name, title, description, url, url_to_image, published_at, user_id) values($1, $2, $3, $4, $5, $6, $7) returning id",
+//         [request.body.name, request.body.title, request.body.description, request.body.url, request.body.url_to_image, request.body.published_at, request.body.user_id]), 
+//         // request.body),
+//         function(err,result) {
+//             done(); // closing the connection;
+//             if(err){
+//                 console.log(err);
+//                 response.status(400).send(err);
+//             }
+//             response.status(200)
+//             .json({
+//                 name: request.body.name
+//             })
+//         }
+//      });
  
 
 
@@ -138,7 +129,7 @@ app.get('/post/show/:id', function (request, response, next) {
                console.log(err);
                response.status(400).send(err);
            }
-           response.status(200).send(result.rows);
+           response.status(200).send(result);
        });
     });
 });
