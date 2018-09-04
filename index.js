@@ -43,6 +43,32 @@ app.post('/test/submit', function(req, res, next) {
     console.log(id);
 });
 
+function returnpost(id,response,user){
+    pg.connect(connectionString,function(err,client,done) {
+        if(err){
+            console.log("not able to get connection "+ err);
+            response.status(400).send(err);
+        } 
+        console.log("returnpost")
+    client.query('SELECT * FROM posts where user_id = $1', [id],function(err,result) {
+        // done(); // closing the connection;
+        if(err){
+            console.log(err);
+            response.status(400).send(err);
+        }
+        console.log("Select");
+        console.log(result);
+        console.log(result.rows);
+        user.posts = result.rows;
+        response.status(200)
+        .json({
+            user: user
+        })
+        
+    });
+    });
+}   
+
 app.post('/auth/user/login', (request, response, next) => {
     console.log("REQUEST BODY");
     console.log(request.body);
@@ -55,47 +81,73 @@ app.post('/auth/user/login', (request, response, next) => {
             response.status(400).send(err);
         } 
         console.log("connected to database");
-        client.query("INSERT INTO users(name, email, google_uid) values($1, $2, $3)",
-        [request.body.name, request.body.email, request.body.google_uid], 
+        console.log(request.body.google_uid);
+        client.query("SELECT * FROM users where google_uid = $1", [request.body.google_uid], function(err,result){
+            console.log("select query done");
+            console.log(result);
+            // done();
+            if(result.rows.length == 0){
+                console.log("enter if condition")
+                client.query("INSERT INTO users(name, email, google_uid) values($1, $2, $3) returning id, name, email, google_uid",
+                [request.body.name, request.body.email, request.body.google_uid], 
+                // request.body),
+                function(err,result) {
+                    // done(); // closing the connection;
+                    if(err){
+                        console.log(err);
+                        response.status(400).send(err);
+                    }
+                    console.log("result insert");
+                    console.log(result);
+                    id = result.rows[0].id;
+                    console.log("id");
+                    console.log(id);
+                    var user = result.rows[0];
+                    var posts = returnpost(id,response,user);
+                    // response.status(200).send(result.rows);
+
+                   
+                });
+            }
+            else{
+                id = result.rows[0].id;
+                console.log("id");
+                console.log(id);
+                var user = result.rows[0];
+                returnpost(id,response,user);
+                // user.posts = posts
+                // res..status(200).response(user);
+            }
+        })  
+     });
+ });
+
+app.post('/post/create', (request, response, next) => {
+    pg.connect(connectionString,function(err,client,done) {
+        if(err){
+            console.log("not able to get connection "+ err);
+            response.status(400).send(err);
+        } 
+        console.log("connected to database");
+        console.log("fluck post create");
+        client.query("INSERT INTO posts(description, name, publishedat, title, url, urltoimage, user_id) values($1, $2, $3, $4, $5, $6, $7) returning description, name, publishedAt, title, url, urlToImage",
+        [request.body.description, request.body.name, request.body.publishedAt, request.body.title, request.body.url, request.body.urlToImage, request.body.user_id],  
         // request.body),
+        
         function(err,result) {
             done(); // closing the connection;
             if(err){
                 console.log(err);
                 response.status(400).send(err);
             }
-            response.status(200).send(result);
-        })
-     })
- })
-
-// app.post('/post/create', (request, response, next) => {
-//     pg.connect(connectionString,function(err,client,done) {
-//         if(err){
-//             console.log("not able to get connection "+ err);
-//             response.status(400).send(err);
-//         } 
-//         console.log("connected to database");
-//         client.query("INSERT INTO posts(name, title, description, url, url_to_image, published_at, user_id) values($1, $2, $3, $4, $5, $6, $7) returning id",
-//         [request.body.name, request.body.title, request.body.description, request.body.url, request.body.url_to_image, request.body.published_at, request.body.user_id]), 
-//         // request.body),
-//         function(err,result) {
-//             done(); // closing the connection;
-//             if(err){
-//                 console.log(err);
-//                 response.status(400).send(err);
-//             }
-//             response.status(200)
-//             .json({
-//                 name: request.body.name
-//             })
-//         }
-//      });
- 
+            response.status(200)
+        });
+    });
+});
 
 
-app.get('/post/delete/:id', (request, response, next) => {
-    const id = request.params.id;
+app.get('/post/delete', (request, response, next) => {
+    // const id = request.params.id;
     pg.connect(connectionString,function(err,client,done) {
         if(err){
             console.log("not able to get connection "+ err);
@@ -103,7 +155,7 @@ app.get('/post/delete/:id', (request, response, next) => {
         } 
         console.log("connected to database");
         client.query("DELETE FROM posts WHERE id=($1)",
-        [id],
+        [request.body.id],
         // request.body),
         function(err,result) {
             done(); // closing the connection;
@@ -111,27 +163,33 @@ app.get('/post/delete/:id', (request, response, next) => {
                 console.log(err);
                 response.status(400).send(err);
             }
-            response.status(200).send(result.rows);
+            client.query("SELECT * FROM users where google_uid = $1", [request.body.google_uid], function(err,result){
+                    id = result.rows[0].id;
+                    console.log("id");
+                    console.log(id);
+                    var user = result.rows[0];
+                    var posts = returnpost(id,response,user);
+            });
         });
      });
 });
 
-app.get('/post/show/:id', function (request, response, next) {
-    const id = request.params.id;
-    pg.connect(connectionString,function(err,client,done) {
-       if(err){
-           console.log("not able to get connection "+ err);
-           response.status(400).send(err);
-       } 
-       client.query('SELECT * FROM posts where user_id = $1', [id],function(err,result) {
-           done(); // closing the connection;
-           if(err){
-               console.log(err);
-               response.status(400).send(err);
-           }
-           response.status(200).send(result);
-       });
-    });
-});
+// app.get('/post/show/:id', function (request, response, next) {
+//     const id = request.params.id;
+//     pg.connect(connectionString,function(err,client,done) {
+//        if(err){
+//            console.log("not able to get connection "+ err);
+//            response.status(400).send(err);
+//        } 
+//        client.query('SELECT * FROM posts where user_id = $1', [id],function(err,result) {
+//            done(); // closing the connection;
+//            if(err){
+//                console.log(err);
+//                response.status(400).send(err);
+//            }
+//            response.status(200).send(result);
+//        });
+//     });
+// });
 
 app.listen(3000, () => console.log('Example app listening on port 3000!'))
