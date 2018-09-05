@@ -140,7 +140,7 @@ app.post('/post/create', (request, response, next) => {
                 console.log(err);
                 response.status(400).send(err);
             }
-            response.status(200)
+            response.status(200);
         });
     });
 });
