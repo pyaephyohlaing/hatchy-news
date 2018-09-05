@@ -130,7 +130,7 @@ app.post('/post/create', (request, response, next) => {
         } 
         console.log("connected to database");
         console.log("fluck post create");
-        client.query("INSERT INTO posts(description, name, publishedat, title, url, urltoimage, user_id) values($1, $2, $3, $4, $5, $6, $7) returning description, name, publishedAt, title, url, urlToImage",
+        client.query("INSERT INTO posts(description, name, publishedat, title, url, urltoimage, user_id) values($1, $2, $3, $4, $5, $6, $7) returning id, description, name, publishedAt, title, url, urlToImage",
         [request.body.description, request.body.name, request.body.publishedAt, request.body.title, request.body.url, request.body.urlToImage, request.body.user_id],  
         // request.body),
         
@@ -146,7 +146,7 @@ app.post('/post/create', (request, response, next) => {
 });
 
 
-app.get('/post/delete', (request, response, next) => {
+app.post('/post/delete', (request, response, next) => {
     // const id = request.params.id;
     pg.connect(connectionString,function(err,client,done) {
         if(err){
@@ -163,7 +163,7 @@ app.get('/post/delete', (request, response, next) => {
                 console.log(err);
                 response.status(400).send(err);
             }
-            client.query("SELECT * FROM users where google_uid = $1", [request.body.google_uid], function(err,result){
+            client.query("SELECT * FROM users where id = $1", [request.body.user_id], function(err,result){
                     id = result.rows[0].id;
                     console.log("id");
                     console.log(id);
